@@ -41,7 +41,7 @@ void main() {
             printf("%d in base %d = %X \n", inputs[0], inputs[1], inputs[0]);
         }
 
-        // Manual conversion with hardcode
+        // Manual conversion
         // if(inputs[1] == 10) {
         //     printf("%d in base %d = %d \n", inputs[0], inputs[1], inputs[0]);
         // } else if(inputs[1] == 2) {
