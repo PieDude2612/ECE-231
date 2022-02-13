@@ -1,5 +1,5 @@
 // ECE 231, Lab 1
-// 2/3/22
+// 2/13/22
 // Arjun Viswanathan
 // Convert and print a user-input decimal number to its corresponding value in a user-specified base
 
@@ -22,6 +22,11 @@ void main() {
 
         if(inputs[0] == 0 && inputs[1] == 0){           // if any input is 0 exit
             break;
+        }
+
+        while(inputs[0] < 0 || inputs[0] > 255) {
+            printf("Enter a number between 0 and 255: ");
+            scanf("%d", &inputs[0]);
         }
         
         while(!(inputs[1] == 16 || inputs[1] == 10 || inputs[1] == 8 || inputs[1] == 2)) {
