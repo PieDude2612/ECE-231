@@ -3,6 +3,12 @@
 // ECE 231, Lab 3
 // Using the 7 segment display LED to output numbers for thermometer
 
+/** TODO: 
+ * Add in input code from temperature sensor
+ * Add in logic to separate decimal point and print out decimal points into the display
+ * Add in logic to choose celcius or farenheit at push button switch input
+ **/
+
 #include <avr/io.h>
 #include <util/delay.h>
 
