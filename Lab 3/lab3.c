@@ -41,10 +41,10 @@ int main() {
             // Displaying the C or F at the end of the number
             DIG4 = PINB & (1<<4);                                   // choose symbol to print with number
             if(DIG4 == 0) {                                         // if button pressed, PB5 HIGH, so celcius display, else farenheit
+                PORTD = farenheitSymbol;
+            } else {
                 PORTD = celciusSymbol;
                 temp = far2cel;
-            } else {
-                PORTD = farenheitSymbol;
             }
             PORTB =~ (1<<3);
             _delay_ms(DELAY);
