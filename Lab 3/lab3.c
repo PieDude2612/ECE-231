@@ -6,7 +6,7 @@
 
 #include <avr/io.h>
 #include <util/delay.h>
-#define DELAY 1                                                 // delay on display
+#define DELAY 1                                                 // delay on display (ms)
 #define DISPDELAY 25                                            // delay for refresh rate of temperature
 
 int main() {
@@ -30,7 +30,7 @@ int main() {
         ADCSRA |= (1<<ADSC);                                    // start ADC conversion
         while((ADCSRA & (1<<ADIF)) == 0);                       // wait until conversion is finished
         temp = ADCL | (ADCH<<8);                                // read the converted value
-        double far2cel = (temp-32.0) * (5.0/9.0);               // convert temp in F to C
+        double far2cel = ((temp/10) - 32.0) * (5.0/9.0) * 10;   // convert temp in F to C
 
         /**
          * @brief The for loop below acts as a refresh rate controller for the display. Basically it will take the ADC value
