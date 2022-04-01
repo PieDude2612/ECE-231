@@ -20,7 +20,7 @@ int main() {
     DDRB = 0x0F;                                                // set pins for COM ports of display numbers
     PORTB = 0x0F;                                               // set 4 pins to HIGH to turn all displays off
 
-    unsigned int temp;
+    unsigned int temp, far2cel;
     int displayTime;
     ADMUX = 0xC0;
     ADCSRA = 0x87;
@@ -29,8 +29,18 @@ int main() {
         // Reading ADC values code taken from Lecture 12-13 slides
         ADCSRA |= (1<<ADSC);                                    // start ADC conversion
         while((ADCSRA & (1<<ADIF)) == 0);                       // wait until conversion is finished
+
         temp = ADCL | (ADCH<<8);                                // read the converted value
-        double far2cel = ((temp/10) - 32.0) * (5.0/9.0) * 10;   // convert temp in F to C
+        // The ADC value is read in without the decimal point, so 32.0F = 320, etc
+        if(temp < 320) {                                        // if F is out of our display bounds, then set it to the bound value
+            temp = 320;
+        } else if(temp > 999) {
+            temp = 999;
+        }
+
+        far2cel = ((temp/10) - 32.0) * (5.0/9.0) * 10;          // convert temp in F to C
+        // This will convert the temp value after it has gone through the if statement, so if F was out of bounds, then C will be 
+        // out of bounds, and our if case will deal with both of them
 
         /**
          * @brief The for loop below acts as a refresh rate controller for the display. Basically it will take the ADC value
