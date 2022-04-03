@@ -9,7 +9,7 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #define DELAY 1                                                 // delay on display (ms)
-#define DISPDELAY 25                                            // delay for refresh rate of temperature
+#define DISPDELAY 20                                            // delay for refresh rate of temperature
 
 int main() {
     unsigned char ledDigits[] = {0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x67};   // digits 0-9 in LED flashes
@@ -22,7 +22,7 @@ int main() {
     DDRB = 0x0F;                                                // set pins for COM ports of display numbers
     PORTB = 0x0F;                                               // set 4 pins to HIGH to turn all displays off
 
-    unsigned int temp, cel2far;
+    unsigned int digitalValue, cel2far, temp;
     int displayTime;
     ADMUX = 0xC0;
     ADCSRA = 0x87;
@@ -30,9 +30,9 @@ int main() {
     while(1) {
         ADCSRA |= (1<<ADSC);                                    // start ADC conversion
         while((ADCSRA & (1<<ADIF)) == 0);                       // wait until conversion is finished
-        temp = ADCL | (ADCH<<8);                                // read the converted value (mV)
+        digitalValue = ADCL | (ADCH<<8);                        // read the converted value (mV)
 
-        temp = temp - 500;                                      // temperature (C) without dp (500 offset for 0C)
+        temp = digitalValue - 500;                              // temperature (C) without dp (500 offset for 0C)
 
         // The ADC value is read in without the decimal point, so 21.2C = 212, etc
         if(temp < 0) {                                          // if C is out of our display bounds, then set it to the bound value
