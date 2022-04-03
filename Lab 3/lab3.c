@@ -4,6 +4,8 @@
 // Using the 7 segment display LED to output numbers for thermometer
 // Temp in F when button unpressed, temp is C when button pressed
 
+// References: Lectures 12-14
+
 #include <avr/io.h>
 #include <util/delay.h>
 #define DELAY 1                                                 // delay on display (ms)
@@ -15,31 +17,32 @@ int main() {
     char farenheitSymbol = 0x71;                                // lights up F on display, (a, e, f, g)
     int DIG1, DIG2, DIG3, DIG4;                                 // the digits on the 7 segment LED display from left to right
 
-    DDRD = 0xFF;                                                // set pins for powering parts of the number (a-DP)
+    DDRD = 0xFF;                                                // set pins for powering parts of the number
     DDRC = 0x00;                                                // read in analog values (temp sensor)
     DDRB = 0x0F;                                                // set pins for COM ports of display numbers
     PORTB = 0x0F;                                               // set 4 pins to HIGH to turn all displays off
 
-    unsigned int temp, far2cel;
+    unsigned int temp, cel2far;
     int displayTime;
     ADMUX = 0xC0;
     ADCSRA = 0x87;
 
     while(1) {
-        // Reading ADC values code taken from Lecture 12-13 slides
         ADCSRA |= (1<<ADSC);                                    // start ADC conversion
         while((ADCSRA & (1<<ADIF)) == 0);                       // wait until conversion is finished
+        temp = ADCL | (ADCH<<8);                                // read the converted value (mV)
 
-        temp = ADCL | (ADCH<<8);                                // read the converted value
-        // The ADC value is read in without the decimal point, so 32.0F = 320, etc
-        if(temp < 320) {                                        // if F is out of our display bounds, then set it to the bound value
-            temp = 320;
-        } else if(temp > 999) {
-            temp = 999;
+        temp = temp - 500;                                      // temperature (C) without dp (500 offset for 0C)
+
+        // The ADC value is read in without the decimal point, so 21.2C = 212, etc
+        if(temp < 0) {                                          // if C is out of our display bounds, then set it to the bound value
+            temp = 0;
+        } else if(temp > 377) {
+            temp = 377;
         }
 
-        far2cel = ((temp/10) - 32.0) * (5.0/9.0) * 10;          // convert temp in F to C
-        // This will convert the temp value after it has gone through the if statement, so if F was out of bounds, then C will be 
+        cel2far = (((temp/10) * (9.0/5.0)) + 32.0) * 10;        // convert temp in C to F
+        // This will convert the temp value after it has gone through the if statement, so if C was out of bounds, then F will be 
         // out of bounds, and our if case will deal with both of them
 
         /**
@@ -52,9 +55,9 @@ int main() {
             DIG4 = PINB & (1<<4);                                   // choose symbol to print with number
             if(DIG4 == 0) {                                         // if button pressed, PB5 HIGH, so celcius display, else farenheit
                 PORTD = farenheitSymbol;
+                temp = cel2far;
             } else {
                 PORTD = celciusSymbol;
-                temp = far2cel;
             }
             PORTB =~ (1<<3);
             _delay_ms(DELAY);
