@@ -5,17 +5,15 @@
 
 #include <avr/io.h>
 #include <util/delay.h>
-#define DELAY 1000
 #define S1 0
 #define S2 1
-#define RED 4
+#define RED 3
 #define GREEN 5
 #define BLUE 6
-#define MOTOR 7
 
 int main() {
     DDRB = 1<<5;
-    DDRD = 0xF0;
+    DDRD = 1<<RED | 1<<GREEN | 1<<BLUE;
 
     int b1, b2;
 
