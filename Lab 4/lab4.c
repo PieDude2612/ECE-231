@@ -1,7 +1,7 @@
 // Arjun Viswanathan
-// 4/4/22
+// 4/11/22
 // ECE 231, Lab 4
-// Controlling motor speed using buttons and LEDs on the bare metal ATMega328p IC
+// Controlling the intensity of an LED using the ATMega328p bare-metal IC
 
 #include <avr/io.h>
 #include <util/delay.h>
@@ -10,10 +10,20 @@
 #define RED 3
 #define GREEN 5
 #define BLUE 6
+#define DELAY 10
+
+void setIntensity(int intensity);
 
 int main() {
     DDRB = 1<<5;
     DDRD = 1<<RED | 1<<GREEN | 1<<BLUE;
+
+    // Since 2 colors (pins 5 and 6) run on TCCR0A, we set COM0A1 and COM0B1 to high
+    // Since 1 color (pin 3) runs on TCCR2A, we set COM0B1 to high
+    TCCR0A = 0xA3;
+    TCCR0B = 0x03;
+    TCCR2A = 0x23;
+    TCCR2B = 0x03;
 
     int b1, b2;
 
@@ -21,21 +31,35 @@ int main() {
         b1 = PIND & (1<<S1);
         b2 = PIND & (1<<S2);
 
-        if(!b1 && !b2) {
-            // set motor speed 0, LED colour RED
-            PORTD = (1<<RED);
-        } 
         if(b1) {
-            // set motor speed low, LED colour YELLOW
-            PORTD = (1<<RED) | (1<<GREEN);
+            // LED on dim brightness
+            setIntensity(10);
         } 
         if(b2) {
-            // set motor speed medium, LED colour GREEN
-            PORTD = (1<<GREEN);
+            // LED on medium brightness
+            setIntensity(100);
         } 
         if(b1 && b2) {
-            // set motor speed high, LED colour MAGENTA
-            PORTD = (1<<RED) | (1<<BLUE);
+            // LED on max brightness
+            setIntensity(255);
+        }
+        if(!b1 && !b2) {
+            // LED off
+            PORTD = 0x00;
+            setIntensity(0);
         }
     }
+}
+
+/**
+ * @brief Sets the upper bound on the timers, and controls the intensity of the LED
+ * The timer counts upto the OCR and then shuts the signal off, resets the OCR and counts again
+ * This will keep the LED at given intensity on RGB
+ * As extra, we can loop the OCR values so the LED cycles different colors
+ * @param intensity 
+ */
+void setIntensity(int intensity) {
+    OCR0A = intensity;
+    OCR0B = intensity;
+    OCR2B = intensity;
 }
