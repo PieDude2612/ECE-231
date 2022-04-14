@@ -2,6 +2,10 @@
 // 4/11/22
 // ECE 231, Lab 4
 // Controlling the intensity of an LED using the ATMega328p bare-metal IC
+// I have made two variations. The first is the simple one: control the intensity of a static color
+// The second is controlling the intensity of a fade of RGB colors. User can choose which one to execute
+
+// RGB LED fader code referenced from: https://www.programming-electronics-diy.xyz/2021/02/how-to-control-rgb-leds-crossfading-rgb.html
 
 #include <avr/io.h>
 #include <util/delay.h>
@@ -11,7 +15,8 @@
 #define GREEN 5
 #define BLUE 6
 
-void display(int intensity);
+void displayFade(int intensity);
+void displayNormal(int intensity);
 
 int main() {
     DDRB = 1<<5;
@@ -52,47 +57,61 @@ int main() {
             DDRD = 0;
         }
 
-        display(brightness);
+        //displayNormal(brightness);
+        displayFade(brightness);
     }
 }
 
 /**
- * @brief Displays a fader of colors on the RGB LED. The intensity is set by the input variable which 
- * control the brightness of the fader. * 
+ * @brief This function will just shine the colors of the LED, with NO fader
+ * 
  * @param intensity 
  */
-void display(int intensity) {
+void displayNormal(int intensity) {
+    OCR0A = intensity;
+    OCR0B = intensity;
+    OCR2B = intensity;                    // set the OCRs to PWM the LEDs
+}
+
+/**
+ * @brief Displays a fader of colors on the RGB LED. The intensity is set by the input variable which 
+ * control the brightness of the fader. 
+ * NOTE: With increased delay, there will be more latency in the code. Hence, optimal values have been chosen
+ * for minimal latency, so delay = 1ms, and 500 iterations will be performed
+ * @param intensity 
+ */
+void displayFade(int intensity) {
     int rgb_values[] = {intensity, 0, 0};         // order: red, green, blue
     int fadeup = 1;                               // color to fade up
     int fadedown = 0;                             // color to fade down
 
     int count;
 
-    for(count = 0; count < 200; count++){
+    for(count = 0; count < 500; count++){
         if(rgb_values[fadedown] < 0) {
             rgb_values[fadedown] = 0;
-            fadedown += 1;
+            fadedown += 1;                        // if fade at 0, then move to next color
 
-            if(fadedown > 2) {
+            if(fadedown > 2) {                    // if we cycled all colors, go back to color 1
                 fadedown = 0;
             }
         }
 
-        if(rgb_values[fadeup] > intensity) {
+        if(rgb_values[fadeup] > intensity) {      // if fade at max, then move to next color
             rgb_values[fadeup] = intensity;
             fadeup += 1;
 
-            if(fadeup > 2) { 
+            if(fadeup > 2) {                      // if we cycled all colors, go back to color 1
                 fadeup = 0;
             }
         }
 
         OCR0A = rgb_values[2];
         OCR0B = rgb_values[1];
-        OCR2B = rgb_values[0];
+        OCR2B = rgb_values[0];                    // set the OCRs to PWM the LEDs
 
         rgb_values[fadedown] -= 1;
-        rgb_values[fadeup] += 1;
-        _delay_ms(1);
+        rgb_values[fadeup] += 1;                  // increment/decrement the fader values
+        _delay_ms(1);                             // a small delay to actually see the fade
     }
 }
