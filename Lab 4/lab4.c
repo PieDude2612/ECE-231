@@ -1,8 +1,9 @@
 // Arjun Viswanathan
-// 4/11/22
+// 4/21/22
 // ECE 231, Lab 4
 // Controlling the intensity of an LED using the ATMega328p bare-metal IC
-// I have made two variations. The first is the simple one: control the intensity of a static color
+// I have made two variations: 
+// The first is the simple one: control the intensity of a static color
 // The second is controlling the intensity of a fade of RGB colors. User can choose which one to execute
 
 // RGB LED fader code referenced from: https://www.programming-electronics-diy.xyz/2021/02/how-to-control-rgb-leds-crossfading-rgb.html
@@ -15,12 +16,13 @@
 #define GREEN 5
 #define BLUE 6
 
-void displayFade(int intensity);
+void displayFade(int intensity, int uD);
 void displayNormal(int intensity);
 
 int main() {
-    DDRB = 1<<5;
+    DDRC = 1<<6;
     int brightness = 0;
+    int updateDelay = 0;
 
     // Since 2 colors (pins 5 and 6) run on TCCR0A, we set COM0A1 and COM0B1 to high
     // Since 1 color (pin 3) runs on TCCR2A, we set COM0B1 to high
@@ -41,16 +43,19 @@ int main() {
             // LED on dim brightness
             DDRD = 1<<RED | 1<<GREEN | 1<<BLUE;
             brightness = 10;
+            updateDelay = 20;
         } 
         if(b2) {
             // LED on medium brightness
             DDRD = 1<<RED | 1<<GREEN | 1<<BLUE;
             brightness = 50;
+            updateDelay = 4;
         } 
         if(b1 && b2) {
-            // LED on max brightness
+            // LED on high brightness
             DDRD = 1<<RED | 1<<GREEN | 1<<BLUE;
-            brightness = 255;
+            brightness = 200;
+            updateDelay = 1;
         }
         if(!b1 && !b2) {
             // LED off
@@ -58,7 +63,7 @@ int main() {
         }
 
         //displayNormal(brightness);
-        displayFade(brightness);
+        displayFade(brightness, updateDelay);
     }
 }
 
@@ -74,20 +79,21 @@ void displayNormal(int intensity) {
 }
 
 /**
- * @brief Displays a fader of colors on the RGB LED. The intensity is set by the input variable which 
+ * @brief EXTRA: Displays a fader of colors on the RGB LED. The intensity is set by the input variable which 
  * control the brightness of the fader. 
- * NOTE: With increased delay, there will be more latency in the code. Hence, optimal values have been chosen
- * for minimal latency, so delay = 1ms, and 500 iterations will be performed
- * @param intensity 
+ * NOTE: I have used a variable delay proportional to the intensity, so the cycle of colors is constant across
+ * each intensity level, and brightness is the only thing that is changing 
+ * @param intensity
+ * @param uD
  */
-void displayFade(int intensity) {
+void displayFade(int intensity, int uD) {
     int rgb_values[] = {intensity, 0, 0};         // order: red, green, blue
     int fadeup = 1;                               // color to fade up
     int fadedown = 0;                             // color to fade down
 
     int count;
 
-    for(count = 0; count < 500; count++){
+    for(count = 0; count < intensity; count++){
         if(rgb_values[fadedown] < 0) {
             rgb_values[fadedown] = 0;
             fadedown += 1;                        // if fade at 0, then move to next color
@@ -110,8 +116,8 @@ void displayFade(int intensity) {
         OCR0B = rgb_values[1];
         OCR2B = rgb_values[0];                    // set the OCRs to PWM the LEDs
 
-        rgb_values[fadedown] -= 1;
-        rgb_values[fadeup] += 1;                  // increment/decrement the fader values
-        _delay_ms(1);                             // a small delay to actually see the fade
+        rgb_values[fadedown] -= 2;
+        rgb_values[fadeup] += 2;                  // increment/decrement the fader values
+        _delay_ms(uD);                            // a delay so all cycle rates are all intensities are the same
     }
 }
