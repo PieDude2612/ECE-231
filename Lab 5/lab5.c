@@ -1,13 +1,15 @@
 // Arjun Viswanathan
 // 4/24/22
 // ECE 231, Lab 5
-// Measuring the distance an object is using the HC-SR04 sensor and showing the distance visibly on LED 
+// Measuring the distance an object is using the HC-SR04 sensor and showing the distance visibly on )LED 
 // and audibly on the piezo speaker
 
 #include <avr/io.h>
 #include <util/delay.h>
 #include <string.h>
 #include <stdlib.h>
+#include "i2c.h"
+#include "SSD1306.h"
 
 #define TRIG 1
 #define ECHO 0
@@ -26,6 +28,7 @@ void displayFade(int brightness, int uD);
 int main() {
     uart_init();
     timer0_init();
+    OLED_Init();
     unsigned char rising_edge_clocks, falling_edge_clocks, echo_width_clocks;
     float target_range;
     int brightness, updateDelay;
@@ -63,6 +66,19 @@ int main() {
         brightness = 200 - target_range;
         updateDelay = 200 / brightness;
         displayFade(brightness, updateDelay);
+
+        char buffer[10];
+
+        OLED_GoToLine(0);
+        OLED_DisplayString("Target Range (cm): ");
+        OLED_GoToLine(1);
+        dtostrf(target_range, -3, 0, buffer);
+        OLED_DisplayString(buffer);
+        OLED_GoToLine(3);
+        OLED_DisplayString("Target Range (inch): ");
+        OLED_GoToLine(4);
+        dtostrf(target_range/2.54, -3, 0, buffer);
+        OLED_DisplayString(buffer);
     }
 }
 
