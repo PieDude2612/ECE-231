@@ -14,27 +14,24 @@
 #define TRIG 1
 #define ECHO 0
 #define RANGE_PER_CLOCK 1.098
-#define RED 3
-#define GREEN 5
+#define RED 5
+#define SPEAKER 3
 #define BLUE 6
 
-void uart_init();
-void uart_send(char c);
-void send_string(char *stringAddress);
 void timer0_init();
-void send_to_monitor(float range);
-void displayFade(int brightness, int uD);
+void displayNormal(int intensity);
+void makeSound(int frequency);
+void setSoundParams(int preload, int prescaler);
 
 int main() {
-    uart_init();
     timer0_init();
     OLED_Init();
     unsigned char rising_edge_clocks, falling_edge_clocks, echo_width_clocks;
-    float target_range;
-    int brightness, updateDelay;
+    float target_range = 0, frequency = 0;
+    int brightness;
 
     DDRB = 1<<TRIG;                             // set the output pins
-    DDRD = 1<<RED | 1<<GREEN | 1<<BLUE;
+    DDRD = 1<<RED | 1<<SPEAKER | 1<<BLUE;
     PORTB &=~ (1<<TRIG);                        // set to low initially 
 
     while(1) {
@@ -52,7 +49,6 @@ int main() {
         if(falling_edge_clocks > rising_edge_clocks) {
             echo_width_clocks = falling_edge_clocks - rising_edge_clocks;
             target_range = echo_width_clocks * RANGE_PER_CLOCK;
-            send_to_monitor(target_range);
         }
 
         if(target_range < 5) {
@@ -63,9 +59,11 @@ int main() {
             target_range = 200;
         }
 
-        brightness = 200 - target_range;
-        updateDelay = 200 / brightness;
-        displayFade(brightness, updateDelay);
+        brightness = 200 - target_range;        // control LED brightness
+        displayNormal(brightness);
+
+        frequency = (int) (4000 - (20*target_range));
+        makeSound(frequency);
 
         char buffer[10];
 
@@ -83,104 +81,31 @@ int main() {
 }
 
 /**
- * @brief Initialize the UART
- */
-void uart_init() {
-    UCSR0B = 1<<TXEN0;
-    UCSR0C = (1<<UCSZ01) | (1<<UCSZ00);
-    UBRR0L = 103;
-}
-
-/**
- * @brief Send the letter passed into the serial monitor through UART
- * @param letter 
- */
-void uart_send(char letter) {
-    while(!(UCSR0A & (1<<UDRE0)));
-    UDR0 = letter;
-}
-
-/**
- * @brief Send a string character by character 
- * @param stringAddress 
- */
-void send_string(char *stringAddress) {
-    unsigned char i;
-    for(i = 0; i < strlen(stringAddress); i++) {
-        uart_send(stringAddress[i]);
-    }
-}
-
-/**
  * @brief Initialize the timer counter
  */
 void timer0_init() {
     TCCR0A = 0xA3;
     TCCR0B = 0x05;
-    TCCR2A = 0x23;
-    TCCR2B = 0x05;
     TCNT0 = 0;
 }
 
-/**
- * @brief Outputs the distance an object is in cm and inches to PuTTY
- * @param range 
- */
-void send_to_monitor(float range) {
-    char buffer[10];
-
-    send_string("Target Range = ");
-    dtostrf(range, 3, 0, buffer);
-    send_string(buffer);
-    send_string(" cm /");
-    dtostrf(range/2.54, 3, 0, buffer);
-    send_string(buffer);
-    send_string(" inch");
-    
-    uart_send(13);
-    uart_send(10);
+void setSoundParams(int preload, int prescaler) {
+    TCCR2A = 0x20;
+    TCCR2B = prescaler;
+    TCNT2 = preload;
 }
 
 /**
- * @brief EXTRA: Displays a fader of colors on the RGB LED. The intensity is set by the input variable which 
- * control the brightness of the fader. 
- * NOTE: I have used a variable delay proportional to the intensity, so the cycle of colors is constant across
- * each intensity level, and brightness is the only thing that is changing 
- * @param intensity
- * @param uD
+ * @brief This function will just shine the colors of the LED, with NO fader
+ * 
+ * @param intensity 
  */
-void displayFade(int intensity, int uD) {
-    int rgb_values[] = {intensity, 0, 0};         // order: red, green, blue
-    int fadeup = 1;                               // color to fade up
-    int fadedown = 0;                             // color to fade down
+void displayNormal(int intensity) {
+    OCR0A = intensity;
+    OCR0B = intensity;                    // set the OCRs to PWM the LEDs
+}
 
-    int count;
-
-    for(count = 0; count < intensity; count++){
-        if(rgb_values[fadedown] < 0) {
-            rgb_values[fadedown] = 0;
-            fadedown += 1;                        // if fade at 0, then move to next color
-
-            if(fadedown > 2) {                    // if we cycled all colors, go back to color 1
-                fadedown = 0;
-            }
-        }
-
-        if(rgb_values[fadeup] > intensity) {      // if fade at max, then move to next color
-            rgb_values[fadeup] = intensity;
-            fadeup += 1;
-
-            if(fadeup > 2) {                      // if we cycled all colors, go back to color 1
-                fadeup = 0;
-            }
-        }
-
-        OCR0A = rgb_values[2];
-        OCR0B = rgb_values[1];
-        OCR2B = rgb_values[0];                    // set the OCRs to PWM the LEDs
-
-        rgb_values[fadedown] -= 2;
-        rgb_values[fadeup] += 2;                  // increment/decrement the fader values
-        _delay_ms(uD);                            // a delay so all cycle rates are all intensities are the same
-    }
+void makeSound(int frequency) {
+    setSoundParams(131, 5);
+    OCR2B = frequency;
 }
