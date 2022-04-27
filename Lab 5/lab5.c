@@ -1,8 +1,13 @@
 // Arjun Viswanathan
 // 4/24/22
 // ECE 231, Lab 5
-// Measuring the distance an object is using the HC-SR04 sensor and showing the distance visibly on )LED 
-// and audibly on the piezo speaker
+// Measuring the distance an object is using the HC-SR04 sensor and showing the distance visibly on OLED 
+// and audibly on the piezo speaker. Extra: Added a RGB LED which increases in intensity as distance -> 0
+
+// Additional: Added a switch to cut out the speaker as the sound is really annoying, so user only hears it 
+// when button is pressed :)
+
+// Code referenced from Prof. McLaughlin's slides on FDTIs and from previous lab
 
 #include <avr/io.h>
 #include <util/delay.h>
@@ -17,11 +22,12 @@
 #define RED 5
 #define SPEAKER 3
 #define BLUE 6
+#define FOSC 16000000
+#define PRESCALER 64
 
 void timer0_init();
-void displayNormal(int intensity);
+void controlLEDIntensity(int intensity);
 void makeSound(int frequency);
-void setSoundParams(int preload, int prescaler);
 
 int main() {
     timer0_init();
@@ -60,22 +66,33 @@ int main() {
         }
 
         brightness = 200 - target_range;        // control LED brightness
-        displayNormal(brightness);
+        controlLEDIntensity(brightness);
 
-        frequency = (int) (4000 - (20*target_range));
+        // The frequency is the clock frequency / frequency * prescaler * 2 from slides
+        frequency = FOSC / ((target_range * 20) * PRESCALER * 2);
         makeSound(frequency);
 
-        char buffer[10];
+        char buffer[10];                        // to store display strings
 
+        // Printing the distance in cm
         OLED_GoToLine(0);
         OLED_DisplayString("Target Range (cm): ");
         OLED_GoToLine(1);
         dtostrf(target_range, -3, 0, buffer);
         OLED_DisplayString(buffer);
+
+        // Printing the distance in inches
         OLED_GoToLine(3);
         OLED_DisplayString("Target Range (inch): ");
         OLED_GoToLine(4);
         dtostrf(target_range/2.54, -3, 0, buffer);
+        OLED_DisplayString(buffer);
+
+        // Extra: Printing the frequency to see if the speaker actually outputs different frequencies
+        OLED_GoToLine(6);
+        OLED_DisplayString("Frequency (Hz): ");
+        OLED_GoToLine(7);
+        dtostrf(frequency, -4, 0, buffer);
         OLED_DisplayString(buffer);
     }
 }
@@ -87,12 +104,10 @@ void timer0_init() {
     TCCR0A = 0xA3;
     TCCR0B = 0x05;
     TCNT0 = 0;
-}
 
-void setSoundParams(int preload, int prescaler) {
-    TCCR2A = 0x20;
-    TCCR2B = prescaler;
-    TCNT2 = preload;
+    TCCR2A = 0x23;
+    TCCR2B = 0x03;
+    TCNT2 = 0;
 }
 
 /**
@@ -100,12 +115,13 @@ void setSoundParams(int preload, int prescaler) {
  * 
  * @param intensity 
  */
-void displayNormal(int intensity) {
+void controlLEDIntensity(int intensity) {
     OCR0A = intensity;
     OCR0B = intensity;                    // set the OCRs to PWM the LEDs
+    _delay_ms(10);
 }
 
 void makeSound(int frequency) {
-    setSoundParams(131, 5);
     OCR2B = frequency;
+    _delay_ms(10);
 }
